@@ -13,6 +13,7 @@ export default function MovieRecommender() {
   const [loading, setLoading] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [emojiFeedback, setEmojiFeedback] = useState({});
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -40,11 +41,24 @@ export default function MovieRecommender() {
 
   const sendFeedback = async () => {
     if (!feedback) return;
+
     try {
-      await axios.post('http://localhost:5000/api/feedback', {
+      const res = await axios.post('http://localhost:5000/api/feedback', {
         feedback,
         originalPreferences: originalPrefs,
       });
+
+      const data = res.data;
+
+      if (data.recommendations && data.recommendations.length > 0) {
+        console.log("✅ New Recommendations:", data.recommendations);
+        setRecommendations(data.recommendations);
+        setEmojiFeedback({});
+        setCurrentIndex(0);
+      } else {
+        alert('No new recommendations returned.');
+      }
+
       setFeedbackSent(true);
       setFeedback('');
     } catch (err) {
@@ -61,7 +75,29 @@ export default function MovieRecommender() {
     setCurrentIndex((prev) => (prev === recommendations.length - 1 ? 0 : prev + 1));
   };
 
-  const currentMovie = recommendations[currentIndex];
+  const currentMovie = recommendations.length > 0 ? recommendations[currentIndex] : null;
+
+  const handleEmojiFeedback = (reaction) => {
+    if (!currentMovie) return;
+
+    const currentMovieId = currentMovie.primaryTitle;
+    const newFeedback = { ...emojiFeedback, [currentMovieId]: reaction };
+    setEmojiFeedback(newFeedback);
+
+    if (reaction === 'dislike') {
+      const updatedRecommendations = recommendations.filter(
+        (movie) => movie.primaryTitle !== currentMovieId
+      );
+      setRecommendations(updatedRecommendations);
+      setCurrentIndex((prev) =>
+        prev >= updatedRecommendations.length ? 0 : prev
+      );
+    } else {
+      setCurrentIndex((prev) =>
+        prev === recommendations.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
 
   return (
     <div className="recommender-container">
@@ -102,32 +138,40 @@ export default function MovieRecommender() {
         <div className="recommendation-section">
           <h2 className="section-title">Top Recommendations</h2>
 
-          <div className="recommendation-card">
-            <div className="nav-arrow left" onClick={handlePrev}>
-              <ArrowLeft />
-            </div>
+          {currentMovie && (
+            <div className="recommendation-card" key={currentMovie.primaryTitle}>
+              <div className="nav-arrow left" onClick={handlePrev}>
+                <ArrowLeft />
+              </div>
 
-            <div>
-              <h3 className="movie-title">{currentMovie.primaryTitle}</h3>
-              <p className="movie-year">({currentMovie.startYear})</p>
-              <p className="movie-rating">⭐ {currentMovie.averageRating}</p>
-              <p className="movie-detail">
-                <strong>Genres:</strong> {currentMovie.genres.join(', ')}
-              </p>
-              <p className="movie-detail">
-                <strong>Relevant People:</strong> {currentMovie.AllPeople.join(', ')}
-              </p>
-              {currentMovie.StreamingServices && currentMovie.StreamingServices.length > 0 && (
+              <div>
+                <h3 className="movie-title">{currentMovie.primaryTitle}</h3>
+                <p className="movie-year">({currentMovie.startYear})</p>
+                <p className="movie-rating">⭐ {currentMovie.averageRating}</p>
                 <p className="movie-detail">
-                  <strong>Available On:</strong> {currentMovie.StreamingServices.join(', ')}
+                  <strong>Genres:</strong> {currentMovie.genres.join(', ')}
                 </p>
-              )}
-            </div>
+                <p className="movie-detail">
+                  <strong>Relevant People:</strong> {currentMovie.AllPeople.join(', ')}
+                </p>
+                {currentMovie.StreamingServices && currentMovie.StreamingServices.length > 0 && (
+                  <p className="movie-detail">
+                    <strong>Available On:</strong> {currentMovie.StreamingServices.join(', ')}
+                  </p>
+                )}
 
-            <div className="nav-arrow right" onClick={handleNext}>
-              <ArrowRight />
+                <div className="emoji-feedback">
+                  <span onClick={() => handleEmojiFeedback('like')} style={{ cursor: 'pointer', fontSize: '1.5rem' }}>😊</span>
+                  <span onClick={() => handleEmojiFeedback('neutral')} style={{ cursor: 'pointer', fontSize: '1.5rem', margin: '0 10px' }}>😐</span>
+                  <span onClick={() => handleEmojiFeedback('dislike')} style={{ cursor: 'pointer', fontSize: '1.5rem' }}>😞</span>
+                </div>
+              </div>
+
+              <div className="nav-arrow right" onClick={handleNext}>
+                <ArrowRight />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="feedback">
             <textarea

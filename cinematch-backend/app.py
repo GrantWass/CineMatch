@@ -1,3 +1,4 @@
+import ast
 from flask import Flask, request, jsonify
 import pandas as pd
 import json
@@ -22,6 +23,7 @@ movies_collection = db.Movies
 
 # Set up Gemini API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 
 @app.route('/api/recommend', methods=['POST'])
 def recommend_movies():
@@ -73,14 +75,16 @@ def handle_feedback():
         original_preferences = data.get("originalPreferences", {})
 
         if feedback and original_preferences:
+            # Construct prompt
             prompt = (
-                f"Refine movie recommendations based on the following feedback: '{feedback}'. "
-                f"The original preferences were: {json.dumps(original_preferences)}. "
-                f"Provide 3-5 movie suggestions with brief justifications for each."
+                f"A user provided feedback on movie recommendations. "
+                f"The original MongoDB query was based on preferences: {json.dumps(original_preferences)}. "
+                f"The feedback was: '{feedback}'. "
+                f"Based on this, rewrite the MongoDB query filter (in Python dict format) to better match the user's taste. "
+                f"Only return the updated MongoDB query dict, nothing else."
             )
 
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-
             payload = {
                 "contents": [
                     {
@@ -88,18 +92,94 @@ def handle_feedback():
                     }
                 ]
             }
-
-            headers = {
-                "Content-Type": "application/json"
-            }
+            headers = {"Content-Type": "application/json"}
 
             response = requests.post(gemini_url, headers=headers, json=payload)
             response.raise_for_status()
 
+            # Get Gemini raw output
             response_json = response.json()
-            refined_response = response_json["candidates"][0]["content"]["parts"][0]["text"]
+            raw_output = response_json["candidates"][0]["content"]["parts"][0]["text"]
+            print("🔍 Raw Gemini Output:\n", raw_output)
 
-            return jsonify({"message": "Feedback received and processed.", "refinedRecommendations": refined_response}), 200
+            # Clean Gemini response: remove code block formatting if present
+            cleaned_output = raw_output.strip()
+            if cleaned_output.startswith("```") and "python" in cleaned_output:
+                cleaned_output = '\n'.join(
+                    line for line in cleaned_output.splitlines()
+                    if not line.strip().startswith("```")
+                )
+
+            # Try to parse and convert to MongoDB query
+            try:
+                updated_query_raw = ast.literal_eval(cleaned_output)
+                print("✅ Parsed Gemini Output:", updated_query_raw)
+
+                # Transform into proper MongoDB query
+                updated_query = {}
+
+                # Handle genres
+                genres = updated_query_raw.get("genres")
+                if genres:
+                    updated_query["genres"] = {
+                        "$in": [genres] if isinstance(genres, str) else genres}
+
+                # Handle actors
+                actors = updated_query_raw.get(
+                    "actors") or updated_query_raw.get("AllPeople")
+                if actors:
+                    updated_query["AllPeople"] = {
+                        "$in": [actors] if isinstance(actors, str) else actors}
+
+                # Handle rating
+                min_rating = updated_query_raw.get(
+                    "min_rating") or updated_query_raw.get("averageRating")
+                if min_rating is not None:
+                    updated_query["averageRating"] = {
+                        "$gte": float(min_rating)}
+
+                # Handle title or other filters
+                if "title" in updated_query_raw:
+                    updated_query["primaryTitle"] = updated_query_raw["title"]
+
+                print("🛠️ Final MongoDB Query:", updated_query)
+
+            except Exception as e:
+                print("❌ Failed to parse Gemini response into dict:", e)
+                return jsonify({
+                    "message": "Failed to parse Gemini response.",
+                    "rawGeminiResponse": raw_output
+                }), 500
+
+            # Run the updated query
+            new_recommendations = list(
+                movies_collection.find(updated_query).limit(5))
+
+            print("🎬 New Recommendations:")
+            for movie in new_recommendations:
+                print({
+                    "primaryTitle": movie.get("primaryTitle"),
+                    "startYear": movie.get("startYear"),
+                    "averageRating": movie.get("averageRating"),
+                    "genres": movie.get("genres", []),
+                    "AllPeople": movie.get("AllPeople", []),
+                    "StreamingServices": movie.get("StreamingServices", [])
+                })
+
+            return jsonify({
+                "message": "Refined recommendations based on feedback.",
+                "recommendations": [
+                    {
+                        "primaryTitle": movie.get("primaryTitle"),
+                        "startYear": movie.get("startYear"),
+                        "averageRating": movie.get("averageRating"),
+                        "genres": movie.get("genres", []),
+                        "AllPeople": movie.get("AllPeople", []),
+                        "StreamingServices": movie.get("StreamingServices", [])
+                    } for movie in new_recommendations
+                ],
+                "parsedQuery": updated_query
+            }), 200
         else:
             return jsonify({"message": "Feedback or preferences are missing."}), 400
     except Exception as e:
