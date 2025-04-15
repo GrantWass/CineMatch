@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import './MovieRecommender.css';
 
 export default function MovieRecommender() {
   const [genres, setGenres] = useState('');
@@ -10,16 +12,18 @@ export default function MovieRecommender() {
   const [originalPrefs, setOriginalPrefs] = useState(null);
   const [loading, setLoading] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleSubmit = async () => {
     setLoading(true);
     setFeedbackSent(false);
     setRecommendations([]);
+    setCurrentIndex(0);
 
     const userPrefs = {
       genres,
       actors,
-      min_rating: minRating ? parseFloat(minRating) : 0
+      min_rating: minRating ? parseFloat(minRating) : 0,
     };
 
     try {
@@ -39,35 +43,45 @@ export default function MovieRecommender() {
     try {
       await axios.post('http://localhost:5000/api/feedback', {
         feedback,
-        originalPreferences: originalPrefs
+        originalPreferences: originalPrefs,
       });
       setFeedbackSent(true);
-      setFeedback('');  // Clear feedback after submission
+      setFeedback('');
     } catch (err) {
       console.error(err);
       alert('Failed to send feedback');
     }
   };
 
-  return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">🎬 Cinematch</h1>
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev === 0 ? recommendations.length - 1 : prev - 1));
+  };
 
-      <div className="space-y-4">
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev === recommendations.length - 1 ? 0 : prev + 1));
+  };
+
+  const currentMovie = recommendations[currentIndex];
+
+  return (
+    <div className="recommender-container">
+      <h1 className="title">🎬 Cinematch</h1>
+
+      <div className="form">
         <input
-          className="w-full border p-2 rounded"
+          className="input"
           placeholder="Preferred genres (comma-separated)"
           value={genres}
           onChange={(e) => setGenres(e.target.value)}
         />
         <input
-          className="w-full border p-2 rounded"
+          className="input"
           placeholder="Favorite actors (comma-separated)"
           value={actors}
           onChange={(e) => setActors(e.target.value)}
         />
         <input
-          className="w-full border p-2 rounded"
+          className="input"
           placeholder="Minimum rating (0-10)"
           type="number"
           value={minRating}
@@ -76,7 +90,7 @@ export default function MovieRecommender() {
           max="10"
         />
         <button
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="button submit-button"
           onClick={handleSubmit}
           disabled={loading || !minRating}
         >
@@ -85,33 +99,51 @@ export default function MovieRecommender() {
       </div>
 
       {recommendations.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-2">Top Recommendations:</h2>
-          <ul className="space-y-3">
-            {recommendations.map((movie, idx) => (
-              <li key={idx} className="border p-3 rounded bg-gray-50">
-                <strong>{movie.primaryTitle}</strong> ({movie.startYear})<br />
-                Rating: {movie.averageRating} | Genres: {movie.genres.join(', ')}<br />
-                Actors: {movie.AllPeople.join(', ')}
-              </li>
-            ))}
-          </ul>
+        <div className="recommendation-section">
+          <h2 className="section-title">Top Recommendations</h2>
 
-          <div className="mt-4">
+          <div className="recommendation-card">
+            <div className="nav-arrow left" onClick={handlePrev}>
+              <ArrowLeft />
+            </div>
+
+            <div>
+              <h3 className="movie-title">{currentMovie.primaryTitle}</h3>
+              <p className="movie-year">({currentMovie.startYear})</p>
+              <p className="movie-rating">⭐ {currentMovie.averageRating}</p>
+              <p className="movie-detail">
+                <strong>Genres:</strong> {currentMovie.genres.join(', ')}
+              </p>
+              <p className="movie-detail">
+                <strong>Relevant People:</strong> {currentMovie.AllPeople.join(', ')}
+              </p>
+              {currentMovie.StreamingServices && currentMovie.StreamingServices.length > 0 && (
+                <p className="movie-detail">
+                  <strong>Available On:</strong> {currentMovie.StreamingServices.join(', ')}
+                </p>
+              )}
+            </div>
+
+            <div className="nav-arrow right" onClick={handleNext}>
+              <ArrowRight />
+            </div>
+          </div>
+
+          <div className="feedback">
             <textarea
-              className="w-full border p-2 rounded"
+              className="feedback-input"
               placeholder="What did you think of these recommendations?"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
             />
             <button
-              className="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              className="button feedback-button"
               onClick={sendFeedback}
               disabled={!feedback}
             >
               Send Feedback
             </button>
-            {feedbackSent && <p className="text-green-600 mt-2">Thanks for your feedback!</p>}
+            {feedbackSent && <p className="feedback-message">Thanks for your feedback!</p>}
           </div>
         </div>
       )}

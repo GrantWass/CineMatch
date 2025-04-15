@@ -53,7 +53,8 @@ def recommend_movies():
                         "startYear": movie.get("startYear"),
                         "averageRating": movie.get("averageRating"),
                         "genres": movie.get("genres", []),
-                        "AllPeople": movie.get("AllPeople", [])
+                        "AllPeople": movie.get("AllPeople", []),
+                        "StreamingServices": movie.get("StreamingServices", [])
                     } for movie in recommendations
                 ]
             }
