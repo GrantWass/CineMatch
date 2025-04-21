@@ -7,6 +7,7 @@ export default function MovieRecommender() {
   const [genres, setGenres] = useState('');
   const [actors, setActors] = useState('');
   const [minRating, setMinRating] = useState('');
+  const [streamingServices, setStreamingServices] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [feedback, setFeedback] = useState('');
   const [originalPrefs, setOriginalPrefs] = useState(null);
@@ -14,6 +15,8 @@ export default function MovieRecommender() {
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [emojiFeedback, setEmojiFeedback] = useState({});
+
+  const allServices = ['Netflix', 'Hulu', 'Disney+', 'Prime Video'];
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -25,6 +28,7 @@ export default function MovieRecommender() {
       genres,
       actors,
       min_rating: minRating ? parseFloat(minRating) : 0,
+      streaming_services: streamingServices
     };
 
     try {
@@ -75,9 +79,8 @@ export default function MovieRecommender() {
     setCurrentIndex((prev) => (prev === recommendations.length - 1 ? 0 : prev + 1));
   };
 
-  const currentMovie = recommendations.length > 0 ? recommendations[currentIndex] : null;
-
   const handleEmojiFeedback = (reaction) => {
+    const currentMovie = recommendations[currentIndex];
     if (!currentMovie) return;
 
     const currentMovieId = currentMovie.primaryTitle;
@@ -99,9 +102,24 @@ export default function MovieRecommender() {
     }
   };
 
+  const resetForm = () => {
+    setGenres('');
+    setActors('');
+    setMinRating('');
+    setStreamingServices([]);
+    setRecommendations([]);
+    setFeedback('');
+    setOriginalPrefs(null);
+    setFeedbackSent(false);
+    setCurrentIndex(0);
+    setEmojiFeedback({});
+  };
+
+  const currentMovie = recommendations.length > 0 ? recommendations[currentIndex] : null;
+
   return (
     <div className="recommender-container">
-      <h1 className="title">🎬 Cinematch</h1>
+      <img src="/CinematchLogo.png" alt="Cinematch Logo" className="cinematch-logo" />
 
       <div className="form">
         <input
@@ -125,13 +143,39 @@ export default function MovieRecommender() {
           min="0"
           max="10"
         />
-        <button
-          className="button submit-button"
-          onClick={handleSubmit}
-          disabled={loading || !minRating}
+
+        <select
+          className="streaming-select"
+          multiple
+          value={streamingServices}
+          onChange={(e) => {
+            const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+            setStreamingServices(selected);
+          }}
         >
-          {loading ? 'Generating...' : 'Get Recommendations'}
-        </button>
+          {allServices.map((service) => (
+            <option key={service} value={service}>
+              {service}
+            </option>
+          ))}
+        </select>
+
+        <div className="form-buttons">
+          <button
+            className="button submit-button"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? 'Generating...' : 'Get Recommendations'}
+          </button>
+          <button
+            className="button reset-button"
+            onClick={resetForm}
+            disabled={loading}
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
       {recommendations.length > 0 && (

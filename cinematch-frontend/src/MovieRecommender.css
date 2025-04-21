@@ -35,28 +35,50 @@
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
+.form-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
 .button {
-    padding: 0.75rem 1.25rem;
+    padding: 0.6rem 1rem;
     border: none;
-    border-radius: 0.5rem;
-    font-weight: 600;
+    border-radius: 8px;
     font-size: 1rem;
-    transition: background 0.3s ease;
     cursor: pointer;
+    transition: background 0.2s;
 }
 
 .submit-button {
-    background-color: #2563eb;
+    background-color: #007bff;
     color: white;
+    flex: 1;
 }
+
+.cinematch-logo {
+    max-width: 300px;
+    height: auto;
+    margin-bottom: 20px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 
 .submit-button:hover {
-    background-color: #1d4ed8;
+    background-color: #0056b3;
 }
 
-.submit-button:disabled {
-    background-color: #a5b4fc;
-    cursor: not-allowed;
+.reset-button {
+    background-color: #f44336;
+    color: white;
+    flex: 1;
+}
+
+.reset-button:hover {
+    background-color: #c62828;
 }
 
 .recommendation-section {
@@ -129,18 +151,23 @@
 }
 
 .feedback {
-    margin-top: 2rem;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
 }
 
 .feedback-input {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.5rem;
-    font-size: 0.95rem;
-    margin-bottom: 0.75rem;
+    max-width: 500px;
+    height: 100px;
+    padding: 10px;
+    font-size: 1rem;
     resize: vertical;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .feedback-button {
@@ -184,4 +211,13 @@
 .emoji-feedback span:hover {
     transform: scale(1.2);
     transition: transform 0.2s ease;
+}
+
+.streaming-select {
+    padding: 0.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background-color: white;
+    max-height: 150px;
 }

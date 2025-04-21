@@ -30,18 +30,26 @@ def recommend_movies():
     try:
         # Get user preferences from request
         user_prefs = request.get_json()
-        genres = user_prefs.get("genres", "").split(',')
-        actors = user_prefs.get("actors", "").split(',')
+        genres = [g.strip() for g in user_prefs.get(
+            "genres", "").split(',') if g.strip()]
+        actors = [a.strip() for a in user_prefs.get(
+            "actors", "").split(',') if a.strip()]
         min_rating = float(user_prefs.get("min_rating", 0))
+        streaming_services = user_prefs.get("streaming_services", [])
 
         # Build MongoDB query from user preferences
         query = {
-            "genres": {"$in": genres},
             "averageRating": {"$gte": min_rating}
         }
 
+        if genres:
+            query["genres"] = {"$in": genres}
+
         if actors:
             query["AllPeople"] = {"$in": actors}
+
+        if streaming_services:
+            query["StreamingServices"] = {"$in": streaming_services}
 
         # Fetch recommendations from MongoDB
         recommendations = list(movies_collection.find(query).limit(5))
@@ -66,6 +74,7 @@ def recommend_movies():
     except Exception as e:
         print(f"Error during recommendation process: {e}")
         return jsonify({"message": "Error during recommendation process."}), 500
+
 
 @app.route('/api/feedback', methods=['POST'])
 def handle_feedback():
@@ -185,6 +194,7 @@ def handle_feedback():
     except Exception as e:
         print(f"Error processing feedback: {e}")
         return jsonify({"message": "Error processing feedback."}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
