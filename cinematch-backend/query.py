@@ -24,7 +24,7 @@ def recommend_movies_v2(request, movies_collection, GEMINI_API_KEY):
             f" - startYear (int)\n\n"
             f" - isAdult (0 or 1)\n\n"
             f"User request: \"{natural_query}\"\n\n"
-            f"Also, filter by the following streaming services: {streaming_services}\n\n"
+            f"Also, filter by the following streaming services (if any): {streaming_services}\n\n"
             f"Prefer the newest movies with the highest rating"
             f"Respond only with the Python dictionary."
         )
@@ -62,6 +62,8 @@ def recommend_movies_v2(request, movies_collection, GEMINI_API_KEY):
 
         # Query DB
         recommendations = list(movies_collection.find(updated_query_raw).limit(5))
+
+        print("recs:", recommendations)
 
         if recommendations:
             return jsonify({
