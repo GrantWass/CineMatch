@@ -7,6 +7,7 @@ import os
 from flask_cors import CORS
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from query import recommend_movies_v2
 
 # Initialize Flask app and CORS
 app = Flask(__name__)
@@ -23,7 +24,6 @@ movies_collection = db.Movies
 
 # Set up Gemini API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
 
 @app.route('/api/recommend', methods=['POST'])
 def recommend_movies():
@@ -194,6 +194,12 @@ def handle_feedback():
     except Exception as e:
         print(f"Error processing feedback: {e}")
         return jsonify({"message": "Error processing feedback."}), 500
+
+
+@app.route('/api/recommendationsv2', methods=['POST'])
+def rec():
+    return recommend_movies_v2(request, movies_collection, GEMINI_API_KEY)
+
 
 
 if __name__ == '__main__':

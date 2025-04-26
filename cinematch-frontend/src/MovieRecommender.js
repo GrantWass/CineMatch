@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import './MovieRecommender.css';
+import React, { useState } from "react";
+import axios from "axios";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import "./MovieRecommender.css";
 
 export default function MovieRecommender() {
-  const [genres, setGenres] = useState('');
-  const [actors, setActors] = useState('');
-  const [minRating, setMinRating] = useState('');
+  const [genres, setGenres] = useState("");
+  const [actors, setActors] = useState("");
+  const [minRating, setMinRating] = useState("");
   const [streamingServices, setStreamingServices] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
   const [originalPrefs, setOriginalPrefs] = useState(null);
   const [loading, setLoading] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [emojiFeedback, setEmojiFeedback] = useState({});
 
-  const allServices = ['Netflix', 'Hulu', 'Disney+', 'Prime Video'];
+  const allServices = ["Netflix", "Hulu", "Disney+", "Prime Video"];
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -28,16 +28,19 @@ export default function MovieRecommender() {
       genres,
       actors,
       min_rating: minRating ? parseFloat(minRating) : 0,
-      streaming_services: streamingServices
+      streaming_services: streamingServices,
     };
 
     try {
-      const res = await axios.post('http://localhost:5000/api/recommend', userPrefs);
+      const res = await axios.post(
+        "http://127.0.0.1:5000/api/recommend",
+        userPrefs
+      );
       setRecommendations(res.data.recommendations);
       setOriginalPrefs(userPrefs);
     } catch (err) {
       console.error(err);
-      alert('Something went wrong!');
+      alert("Something went wrong!");
     } finally {
       setLoading(false);
     }
@@ -47,7 +50,7 @@ export default function MovieRecommender() {
     if (!feedback) return;
 
     try {
-      const res = await axios.post('http://localhost:5000/api/feedback', {
+      const res = await axios.post("http://localhost:5000/api/feedback", {
         feedback,
         originalPreferences: originalPrefs,
       });
@@ -60,23 +63,27 @@ export default function MovieRecommender() {
         setEmojiFeedback({});
         setCurrentIndex(0);
       } else {
-        alert('No new recommendations returned.');
+        alert("No new recommendations returned.");
       }
 
       setFeedbackSent(true);
-      setFeedback('');
+      setFeedback("");
     } catch (err) {
       console.error(err);
-      alert('Failed to send feedback');
+      alert("Failed to send feedback");
     }
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? recommendations.length - 1 : prev - 1));
+    setCurrentIndex((prev) =>
+      prev === 0 ? recommendations.length - 1 : prev - 1
+    );
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev === recommendations.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) =>
+      prev === recommendations.length - 1 ? 0 : prev + 1
+    );
   };
 
   const handleEmojiFeedback = (reaction) => {
@@ -87,7 +94,7 @@ export default function MovieRecommender() {
     const newFeedback = { ...emojiFeedback, [currentMovieId]: reaction };
     setEmojiFeedback(newFeedback);
 
-    if (reaction === 'dislike') {
+    if (reaction === "dislike") {
       const updatedRecommendations = recommendations.filter(
         (movie) => movie.primaryTitle !== currentMovieId
       );
@@ -103,23 +110,28 @@ export default function MovieRecommender() {
   };
 
   const resetForm = () => {
-    setGenres('');
-    setActors('');
-    setMinRating('');
+    setGenres("");
+    setActors("");
+    setMinRating("");
     setStreamingServices([]);
     setRecommendations([]);
-    setFeedback('');
+    setFeedback("");
     setOriginalPrefs(null);
     setFeedbackSent(false);
     setCurrentIndex(0);
     setEmojiFeedback({});
   };
 
-  const currentMovie = recommendations.length > 0 ? recommendations[currentIndex] : null;
+  const currentMovie =
+    recommendations.length > 0 ? recommendations[currentIndex] : null;
 
   return (
     <div className="recommender-container">
-      <img src="/CinematchLogo.png" alt="Cinematch Logo" className="cinematch-logo" />
+      <img
+        src="/CinematchLogo.png"
+        alt="Cinematch Logo"
+        className="cinematch-logo"
+      />
 
       <div className="form">
         <input
@@ -149,7 +161,10 @@ export default function MovieRecommender() {
           multiple
           value={streamingServices}
           onChange={(e) => {
-            const selected = Array.from(e.target.selectedOptions, (option) => option.value);
+            const selected = Array.from(
+              e.target.selectedOptions,
+              (option) => option.value
+            );
             setStreamingServices(selected);
           }}
         >
@@ -166,7 +181,7 @@ export default function MovieRecommender() {
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading ? 'Generating...' : 'Get Recommendations'}
+            {loading ? "Generating..." : "Get Recommendations"}
           </button>
           <button
             className="button reset-button"
@@ -183,7 +198,10 @@ export default function MovieRecommender() {
           <h2 className="section-title">Top Recommendations</h2>
 
           {currentMovie && (
-            <div className="recommendation-card" key={currentMovie.primaryTitle}>
+            <div
+              className="recommendation-card"
+              key={currentMovie.primaryTitle}
+            >
               <div className="nav-arrow left" onClick={handlePrev}>
                 <ArrowLeft />
               </div>
@@ -193,21 +211,43 @@ export default function MovieRecommender() {
                 <p className="movie-year">({currentMovie.startYear})</p>
                 <p className="movie-rating">⭐ {currentMovie.averageRating}</p>
                 <p className="movie-detail">
-                  <strong>Genres:</strong> {currentMovie.genres.join(', ')}
+                  <strong>Genres:</strong> {currentMovie.genres.join(", ")}
                 </p>
                 <p className="movie-detail">
-                  <strong>Relevant People:</strong> {currentMovie.AllPeople.join(', ')}
+                  <strong>Relevant People:</strong>{" "}
+                  {currentMovie.AllPeople.join(", ")}
                 </p>
-                {currentMovie.StreamingServices && currentMovie.StreamingServices.length > 0 && (
-                  <p className="movie-detail">
-                    <strong>Available On:</strong> {currentMovie.StreamingServices.join(', ')}
-                  </p>
-                )}
+                {currentMovie.StreamingServices &&
+                  currentMovie.StreamingServices.length > 0 && (
+                    <p className="movie-detail">
+                      <strong>Available On:</strong>{" "}
+                      {currentMovie.StreamingServices.join(", ")}
+                    </p>
+                  )}
 
                 <div className="emoji-feedback">
-                  <span onClick={() => handleEmojiFeedback('like')} style={{ cursor: 'pointer', fontSize: '1.5rem' }}>😊</span>
-                  <span onClick={() => handleEmojiFeedback('neutral')} style={{ cursor: 'pointer', fontSize: '1.5rem', margin: '0 10px' }}>😐</span>
-                  <span onClick={() => handleEmojiFeedback('dislike')} style={{ cursor: 'pointer', fontSize: '1.5rem' }}>😞</span>
+                  <span
+                    onClick={() => handleEmojiFeedback("like")}
+                    style={{ cursor: "pointer", fontSize: "1.5rem" }}
+                  >
+                    😊
+                  </span>
+                  <span
+                    onClick={() => handleEmojiFeedback("neutral")}
+                    style={{
+                      cursor: "pointer",
+                      fontSize: "1.5rem",
+                      margin: "0 10px",
+                    }}
+                  >
+                    😐
+                  </span>
+                  <span
+                    onClick={() => handleEmojiFeedback("dislike")}
+                    style={{ cursor: "pointer", fontSize: "1.5rem" }}
+                  >
+                    😞
+                  </span>
                 </div>
               </div>
 
@@ -231,7 +271,9 @@ export default function MovieRecommender() {
             >
               Send Feedback
             </button>
-            {feedbackSent && <p className="feedback-message">Thanks for your feedback!</p>}
+            {feedbackSent && (
+              <p className="feedback-message">Thanks for your feedback!</p>
+            )}
           </div>
         </div>
       )}
