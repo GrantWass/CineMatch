@@ -2,12 +2,13 @@ import requests
 from flask import Flask, request, jsonify
 import ast
 
+
 def recommend_movies_v2(request, movies_collection, GEMINI_API_KEY):
     try:
         data = request.get_json()
         natural_query = data.get("natural_language_query", "").strip()
         streaming_services = data.get("streaming_services", [])
-        
+
         if not natural_query:
             return jsonify({"message": "Missing natural_language_query"}), 400
 
@@ -30,7 +31,6 @@ def recommend_movies_v2(request, movies_collection, GEMINI_API_KEY):
         )
 
         print("User Query:", natural_query)
-
 
         gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
         payload = {
@@ -60,10 +60,29 @@ def recommend_movies_v2(request, movies_collection, GEMINI_API_KEY):
         updated_query_raw = ast.literal_eval(cleaned_output)
         print("✅ Parsed Gemini Output:", updated_query_raw)
 
-        # Query DB
-        recommendations = list(movies_collection.find(updated_query_raw).limit(5))
+        # Run first query
+        recommendations = list(movies_collection.find(
+            updated_query_raw).sort("averageRating", -1).limit(5))
+        print("First Attempt Recommendations:", recommendations)
 
-        print("recs:", recommendations)
+        # If no results, relax the query
+        if not recommendations:
+            print("No results found, relaxing the query")
+            relaxed_query = updated_query_raw.copy()
+
+            # Relax the query
+            relaxed_query.pop('genres', None)
+            relaxed_query.pop('AllPeople', None)
+
+            # If still no results, remove StreamingServices
+            if 'StreamingServices' in relaxed_query:
+                relaxed_query.pop('StreamingServices')
+
+            print("Relaxed Query:", relaxed_query)
+
+            recommendations = list(movies_collection.find(
+                relaxed_query).sort("averageRating", -1).limit(5))
+            print("Relaxed Attempt Recommendations:", recommendations)
 
         if recommendations:
             return jsonify({
