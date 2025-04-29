@@ -3,25 +3,23 @@
 import type React from "react"
 
 import { useState, useTransition } from "react"
-import { Search, ThumbsUp, ThumbsDown, Clock, Star, PlayCircle } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Clock, Star, PlayCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { motion, AnimatePresence } from "framer-motion"
 import { getMovieRecommendations, type Movie } from "@/lib/actions"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 
 // Available streaming services
-const STREAMING_SERVICES = ["Netflix", "Amazon Prime", "Hulu", "Disney+", "HBO Max", "Apple TV+"]
+const STREAMING_SERVICES = ["Disney+", "Hulu", "Netflix", "Prime Video"]
 
 export function MovieRecommendation() {
   const [query, setQuery] = useState("")
   const [isPending, startTransition] = useTransition()
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
   const [movies, setMovies] = useState<Movie[]>([])
-  const [direction, setDirection] = useState<"left" | "right" | null>(null)
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [showFilters, setShowFilters] = useState(false)
 
@@ -38,44 +36,34 @@ export function MovieRecommendation() {
       // Call the server action
       const recommendations = await getMovieRecommendations(formData)
       setMovies(recommendations)
-      setCurrentIndex(0)
+      setCurrentPage(0)
     })
-  }
-
-  const handleLike = () => {
-    setDirection("right")
-    setTimeout(() => {
-      setDirection(null)
-      if (currentIndex < movies.length - 1) {
-        setCurrentIndex(currentIndex + 1)
-      } else {
-        // Reset when we've gone through all movies
-        setMovies([])
-      }
-    }, 300)
-  }
-
-  const handleDislike = () => {
-    setDirection("left")
-    setTimeout(() => {
-      setDirection(null)
-      if (currentIndex < movies.length - 1) {
-        setCurrentIndex(currentIndex + 1)
-      } else {
-        // Reset when we've gone through all movies
-        setMovies([])
-      }
-    }, 300)
   }
 
   const toggleService = (service: string) => {
     setSelectedServices((prev) => (prev.includes(service) ? prev.filter((s) => s !== service) : [...prev, service]))
   }
 
-  const currentMovie = movies[currentIndex]
+  // Calculate pagination
+  const moviesPerPage = 4
+  const totalPages = Math.ceil(movies.length / moviesPerPage)
+  const startIndex = currentPage * moviesPerPage
+  const currentMovies = movies.slice(startIndex, startIndex + moviesPerPage)
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const goToPrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="max-w-6xl mx-auto">
       {movies.length === 0 ? (
         <div className="space-y-6">
           <div className="text-center space-y-2">
@@ -83,7 +71,7 @@ export function MovieRecommendation() {
             <p className="text-slate-300">Tell us what you're in the mood for and we'll suggest movies for you</p>
           </div>
 
-          <form onSubmit={handleSearch} className="space-y-4">
+          <form onSubmit={handleSearch} className="space-y-4 max-w-md mx-auto">
             <div className="flex space-x-2">
               <Input
                 placeholder="E.g., sci-fi with plot twists"
@@ -156,91 +144,96 @@ export function MovieRecommendation() {
             >
               New Search
             </Button>
-            <div className="text-sm text-slate-400">
-              {currentIndex + 1} of {movies.length}
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={goToPrevPage}
+                disabled={currentPage === 0}
+                variant="outline"
+                className="text-slate-300 border-slate-700 hover:bg-slate-700"
+                size="icon"
+              >
+                <ChevronLeft className="h-4 w-4 text-black" />
+              </Button>
+              <span className="text-sm text-slate-400">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <Button
+                onClick={goToNextPage}
+                disabled={currentPage >= totalPages - 1}
+                variant="outline"
+                className="text-slate-300 border-slate-700 hover:bg-slate-700"
+                size="icon"
+              >
+                <ChevronRight className="h-4 w-4 text-black" />
+              </Button>
             </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentMovie.primaryTitle}
-              initial={{ opacity: 1 }}
-              animate={{
-                opacity: 1,
-                x: direction === "left" ? -200 : direction === "right" ? 200 : 0,
-                rotate: direction === "left" ? -10 : direction === "right" ? 10 : 0,
-              }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card className="overflow-hidden bg-slate-800 border-slate-700">
-                <div className="relative">
-                  <img
-                    src={currentMovie.image || "/placeholder.svg"}
-                    alt={currentMovie.primaryTitle}
-                    className="w-full h-64 object-cover"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-                    <h3 className="text-xl font-bold text-white">{currentMovie.primaryTitle}</h3>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Clock className="h-4 w-4 text-slate-300" />
-                      <span className="text-sm text-slate-300">{currentMovie.duration}</span>
-                      <Star className="h-4 w-4 text-yellow-500 ml-2" />
-                      <span className="text-sm text-slate-300">{currentMovie.averageRating}/10</span>
-                      <span className="text-sm text-slate-400">({currentMovie.startYear})</span>
+          <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(250px,1fr))]">
+            {currentMovies.map((movie) => (
+              <Card key={movie.primaryTitle} className="bg-slate-800 border-slate-700 h-full flex flex-col">
+                <CardContent className="p-4 space-y-3 flex-grow">
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-1">{movie.primaryTitle}</h3>
+                    <div className="flex items-center space-x-2 text-xs">
+                      {movie.startYear && <span className="text-slate-400">({movie.startYear})</span>}
+                      <div className="flex items-center">
+                        {movie.duration &&<Clock className="h-3 w-3 text-slate-300 mr-1" />}
+                        {movie.duration && <span className="text-slate-300">{movie.duration} minutes</span>}
+                      </div>
+                      <div className="flex items-center">
+                        {movie.averageRating && <Star className="h-3 w-3 text-yellow-500 mr-1" />}
+                        {movie.averageRating && <span className="text-slate-300">{movie.averageRating}/10</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {currentMovie.genres.map((genre) => (
-                      <Badge key={genre} variant="secondary" className="bg-slate-700 text-white">
+
+                  <div className="flex flex-wrap gap-1">
+                    {movie.genres.map((genre) => (
+                      <Badge key={genre} variant="secondary" className="bg-slate-700 text-white text-xs">
                         {genre}
                       </Badge>
                     ))}
                   </div>
 
-                  <p className="text-sm text-slate-300">{currentMovie.description}</p>
+                  {/* <p className="text-xs text-slate-300 line-clamp-3">{movie.description}</p> */}
+                  {movie.llmExplanation && (
+                    <>
+                        <div className="text-xs font-medium text-white">Why You'll Like It:</div>
+                        <p className="text-xs text-slate-300">{movie.llmExplanation}</p>
+                    </>
+                  )}
 
-                  {currentMovie.AllPeople && currentMovie.AllPeople.length > 0 && (
+                  {movie.AllPeople && movie.AllPeople.length > 0 && (
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-white">Cast & Crew:</div>
-                      <p className="text-sm text-slate-400">
-                        {currentMovie.AllPeople.slice(0, 4).join(", ")}
-                        {currentMovie.AllPeople.length > 4 && "..."}
+                      <div className="text-xs font-medium text-white">Cast & Crew:</div>
+                      <p className="text-xs text-slate-400">
+                        {movie.AllPeople.slice(0, 8).join(", ")}
+                        {movie.AllPeople.length > 8 && "..."}
                       </p>
                     </div>
                   )}
 
-                  {currentMovie.StreamingServices && currentMovie.StreamingServices.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">Available on:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {currentMovie.StreamingServices.map((platform) => (
+                  {movie.StreamingServices && movie.StreamingServices.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-medium text-white">Available on:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {movie.StreamingServices.map((platform) => (
                           <div
                             key={platform}
-                            className="flex items-center space-x-1 text-sm bg-slate-700 px-2 py-1 rounded-md"
+                            className="flex items-center space-x-1 text-xs bg-slate-700 px-1.5 py-0.5 rounded"
                           >
-                            <PlayCircle className="h-4 w-4 text-rose-500" />
-                            <span>{platform}</span>
+                            <PlayCircle className="h-3 w-3 text-rose-500" />
+                            <span className="text-white">{platform}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
-                  <div className="flex justify-between pt-4">
-                    <Button onClick={handleDislike} className="bg-slate-700 hover:bg-slate-600 rounded-full h-14 w-14">
-                      <ThumbsDown className="h-6 w-6" />
-                    </Button>
-                    <Button onClick={handleLike} className="bg-rose-600 hover:bg-rose-700 rounded-full h-14 w-14">
-                      <ThumbsUp className="h-6 w-6" />
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          </AnimatePresence>
+            ))}
+          </div>
         </div>
       )}
     </div>
