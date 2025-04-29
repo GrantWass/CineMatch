@@ -22,6 +22,9 @@ export function MovieRecommendation() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [showFilters, setShowFilters] = useState(false)
+  const [likedTropes, setLikedTropes] = useState<string[]>([]) // Tracks liked tropes
+  const [likedGenres, setLikedGenres] = useState<string[]>([]) // Tracks liked genres
+  const [dislikedTitles, setDislikedTitles] = useState<string[]>([]) // Tracks disliked movie titles
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,6 +45,43 @@ export function MovieRecommendation() {
 
   const toggleService = (service: string) => {
     setSelectedServices((prev) => (prev.includes(service) ? prev.filter((s) => s !== service) : [...prev, service]))
+  }
+
+  const handleLike = (movie: Movie) => {
+    const tropes = movie.Tropes || []
+    const genres = movie.genres || []
+
+    // Add the current movie's tropes and genres to the liked ones
+    const newLikedTropes = [...new Set([...likedTropes, ...tropes])]
+    const newLikedGenres = [...new Set([...likedGenres, ...genres])]
+
+    setLikedTropes(newLikedTropes)
+    setLikedGenres(newLikedGenres)
+
+    // Reorder movies to prioritize those with similar tropes or genres
+    const updated = movies
+      .filter((m) => m.primaryTitle !== movie.primaryTitle && !dislikedTitles.includes(m.primaryTitle))
+      .sort((a, b) => {
+        const aMatchesTropes = (a.Tropes || []).filter((t) => newLikedTropes.includes(t)).length
+        const bMatchesTropes = (b.Tropes || []).filter((t) => newLikedTropes.includes(t)).length
+
+        const aMatchesGenres = (a.genres || []).filter((g) => newLikedGenres.includes(g)).length
+        const bMatchesGenres = (b.genres || []).filter((g) => newLikedGenres.includes(g)).length
+
+        // Total similarity score based on both genres and tropes
+        const aScore = aMatchesTropes + aMatchesGenres
+        const bScore = bMatchesTropes + bMatchesGenres
+
+        return bScore - aScore
+      })
+
+    setMovies([movie, ...updated])
+  }
+
+  const handleDislike = (movie: Movie) => {
+    const updated = movies.filter((m) => m.primaryTitle !== movie.primaryTitle)
+    setDislikedTitles((prev) => [...prev, movie.primaryTitle])
+    setMovies(updated)
   }
 
   // Calculate pagination
@@ -178,7 +218,7 @@ export function MovieRecommendation() {
                     <div className="flex items-center space-x-2 text-xs">
                       {movie.startYear && <span className="text-slate-400">({movie.startYear})</span>}
                       <div className="flex items-center">
-                        {movie.duration &&<Clock className="h-3 w-3 text-slate-300 mr-1" />}
+                        {movie.duration && <Clock className="h-3 w-3 text-slate-300 mr-1" />}
                         {movie.duration && <span className="text-slate-300">{movie.duration} minutes</span>}
                       </div>
                       <div className="flex items-center">
@@ -196,11 +236,10 @@ export function MovieRecommendation() {
                     ))}
                   </div>
 
-                  {/* <p className="text-xs text-slate-300 line-clamp-3">{movie.description}</p> */}
                   {movie.llmExplanation && (
                     <>
-                        <div className="text-xs font-medium text-white">Why You'll Like It:</div>
-                        <p className="text-xs text-slate-300">{movie.llmExplanation}</p>
+                      <div className="text-xs font-medium text-white">Why You'll Like It:</div>
+                      <p className="text-xs text-slate-300">{movie.llmExplanation}</p>
                     </>
                   )}
 
@@ -230,6 +269,21 @@ export function MovieRecommendation() {
                       </div>
                     </div>
                   )}
+
+                  <div className="flex space-x-2 mt-2">
+                    <Button
+                      onClick={() => handleLike(movie)}
+                      className="bg-green-700 text-black text-xs px-3 py-1 rounded-md"
+                    >
+                      👍 Like
+                    </Button>
+                    <Button
+                      onClick={() => handleDislike(movie)}
+                      className="bg-red-700 text-black text-xs px-3 py-1 rounded-md"
+                    >
+                      👎 Dislike
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

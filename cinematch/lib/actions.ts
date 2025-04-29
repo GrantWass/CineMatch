@@ -15,6 +15,7 @@ export type Movie = {
   description?: string
   image?: string
   duration?: string | number
+  Tropes?: string[]
 }
 
 // Schema for validating the recommendation request
