@@ -273,13 +273,13 @@ export function MovieRecommendation() {
                   <div className="flex space-x-2 mt-2">
                     <Button
                       onClick={() => handleLike(movie)}
-                      className="bg-green-700 text-black text-xs px-3 py-1 rounded-md"
+                      className="bg-green-900 text-white text-xs px-3 py-1 rounded-md"
                     >
                       👍 Like
                     </Button>
                     <Button
                       onClick={() => handleDislike(movie)}
-                      className="bg-red-700 text-black text-xs px-3 py-1 rounded-md"
+                      className="bg-red-900 text-white text-xs px-3 py-1 rounded-md"
                     >
                       👎 Dislike
                     </Button>
