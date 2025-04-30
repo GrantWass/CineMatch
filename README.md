@@ -88,3 +88,4 @@ Features
 -   Personalized movie recommendations based on user preferences through a natural language search
 -   Detailed movie information including cast, crew, rating, and runtime
 -   Streaming service availability for recommended movies
+-   Prioritizes movies that the user likes/dislikes
